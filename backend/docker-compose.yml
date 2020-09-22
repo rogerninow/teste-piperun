@@ -1,0 +1,74 @@
+version: "3.7"
+services:
+  app:
+    build:
+      args:
+        user: rogerninow
+        uid: 1000
+      context: ./
+      dockerfile: Dockerfile
+    image: ${APP_NAME}
+    container_name: ${APP_NAME}-app
+    restart: unless-stopped
+    working_dir: /var/www/
+    ports:
+      - 9000:9000
+    volumes:
+      - ./:/var/www
+      - ./docker-compose/php/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+    networks:
+      app-network:
+
+  mysql:
+    image: mysql:5.7
+    container_name: ${APP_NAME}-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      app-network:
+        ipv4_address: 10.5.0.5
+
+  nginx:
+    image: nginx:alpine
+    container_name: ${APP_NAME}-nginx
+    restart: unless-stopped
+    ports:
+      - 80:80
+    volumes:
+      - ./:/var/www
+      - ./docker-compose/nginx:/etc/nginx/conf.d
+    networks:
+      - app-network
+
+  redis:
+    image: redis:alpine
+    container_name: ${APP_NAME}-redis
+    restart: unless-stopped
+    ports:
+      - 6379:6379
+    volumes:
+      - redis-data:/data
+    networks:
+      app-network:
+        ipv4_address: 10.5.0.6
+
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.5.0.0/16
+
+volumes:
+  mysql-data:
+  redis-data:
